@@ -1,191 +1,186 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-HylexCrypt CLI wrapper (no PIN feature)
-
-Place this file next to your core implementation (core.py) and run:
-  python cli.py --help
-
-This wrapper:
- - Uses core.encode_to_carriers, core.decode_from_parts, core.wipe_message_bits,
-   core.wipe_later_action, core.selftest and core.MANUAL_TEXT.
- - Adds a top-level --debug that sets HYLEXCRYPT_DEBUG=1 and raises logging to DEBUG.
- - Prompts for a password if not provided on the command line (safer).
+HylexCrypt - The Ultimate CLI
+------------------------
+Command-line interface for the core crypto/stego system.
 """
-from __future__ import annotations
-import os
-import sys
+
 import argparse
-import getpass
-from pathlib import Path
-from typing import Optional
+import logging
+import sys
 
-# Import your core module (must be in same folder or installed)
-import core
+from core import (
+    encode_to_carriers,
+    decode_from_parts,
+    wipe_message_bits,
+    wipe_later_action,
+    selftest,
+    SECURITY_PROFILES,
+    MANUAL_TEXT,
+)
 
-# expose core logger locally (optional)
-logger = core.logger
+# Configure logger
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("cli")
 
-def create_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(prog="hylexcrypt", description="HylexCrypt CLI wrapper (uses core module)")
-    p.add_argument("--debug", action="store_true", help="Enable debug mode (sets HYLEXCRYPT_DEBUG=1 and shows tracebacks)")
-    sp = p.add_subparsers(dest="cmd", required=True)
 
-    enc = sp.add_parser("encode", help="Embed and encrypt message into carriers")
-    enc.add_argument("carriers", nargs="+", help="Carrier files (images, wav). Can be multiple.")
+# -------------------------------------------------------------------
+# ENCODE COMMAND
+# -------------------------------------------------------------------
+def cmd_encode(args):
+    try:
+        written, decoys = encode_to_carriers(
+            carriers=args.carriers,
+            outdir=args.outdir,
+            message=args.message,
+            password=args.password,
+            profile=args.profile,
+            pepper=args.pepper,
+            decoys=args.decoys,
+            expire=args.expire,
+            fec=args.fec,
+            compress=args.compress,
+            autowipe=args.autowipe,
+            device_lock=args.device_lock,
+        )
+        logger.info("Encode complete.")
+        for f in written:
+            print(f"[+] Written: {f}")
+        if decoys:
+            for f in decoys:
+                print(f"[+] Decoy written: {f}")
+    except Exception as e:
+        logger.error(f"Encode failed: {e}")
+        sys.exit(1)
+
+
+# -------------------------------------------------------------------
+# DECODE COMMAND
+# -------------------------------------------------------------------
+def cmd_decode(args):
+    try:
+        message = decode_from_parts(
+            parts=args.parts,
+            password=args.password,
+            profile=args.profile,
+            pepper=args.pepper,
+            autowipe=args.autowipe,
+            device_lock=args.device_lock,
+        )
+        print("[+] DECODE OK")
+        if message:
+            print(message.decode("utf-8", errors="replace"))
+    except Exception as e:
+        logger.error(f"Decode failed: {e}")
+        sys.exit(1)
+
+
+# -------------------------------------------------------------------
+# WIPE COMMANDS
+# -------------------------------------------------------------------
+def cmd_wipe_message(args):
+    try:
+        wipe_message_bits(args.parts, password=args.password)
+        logger.info("Message bits wiped successfully.")
+    except Exception as e:
+        logger.error(f"Wipe-message failed: {e}")
+        sys.exit(1)
+
+
+def cmd_wipe_later(args):
+    try:
+        wipe_later_action()
+        logger.info("Autowipe executed successfully.")
+    except Exception as e:
+        logger.error(f"Wipe-later failed: {e}")
+        sys.exit(1)
+
+
+# -------------------------------------------------------------------
+# SELFTEST COMMAND
+# -------------------------------------------------------------------
+def cmd_selftest(args):
+    try:
+        selftest()
+    except Exception as e:
+        logger.error(f"Selftest failed: {e}")
+        sys.exit(1)
+
+
+# -------------------------------------------------------------------
+# MANUAL COMMAND
+# -------------------------------------------------------------------
+def cmd_manual(args):
+    print(MANUAL_TEXT)
+
+
+# -------------------------------------------------------------------
+# MAIN PARSER
+# -------------------------------------------------------------------
+def build_parser():
+    parser = argparse.ArgumentParser(
+        prog="hylexcrypt",
+        description="HylexCrypt Ultimate 2050 - Stego + Crypto tool",
+    )
+
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    # encode
+    enc = subparsers.add_parser("encode", help="Encrypt & embed message")
+    enc.add_argument("carriers", nargs="+", help="Carrier files to embed into")
     enc.add_argument("-o", "--outdir", required=True, help="Output directory")
     enc.add_argument("-m", "--message", required=True, help="Message to embed")
-    enc.add_argument("-p", "--password", required=False, help="Password (will prompt if not provided)")
-    enc.add_argument("-s", "--profile", choices=list(core.SECURITY_PROFILES.keys()), default="nexus", help="Security profile")
-    enc.add_argument("--decoys", type=int, default=0, help="Number of decoy files to create")
-    enc.add_argument("--expire", type=int, default=0, help="Expire payload after N seconds (logical self-destruct)")
-    enc.add_argument("--fec", action="store_true", help="Enable Reed-Solomon FEC (optional)")
-    enc.add_argument("--compress", action="store_true", help="Compress payload (zlib)")
-    enc.add_argument("--pepper", default=None, help="Optional pepper string (adds extra secret)")
-    enc.add_argument("--device-lock", action="store_true", help="Bind key to this device (device-lock)")
-    enc.add_argument("--autowipe", type=int, default=0, help="Schedule background wipe of the embedded message after N seconds (detached).")
+    enc.add_argument("-p", "--password", required=True, help="Password")
+    enc.add_argument("-s", "--profile", choices=SECURITY_PROFILES.keys(), default="basic")
+    enc.add_argument("--pepper", default="", help="Optional pepper")
+    enc.add_argument("--decoys", type=int, default=0, help="Number of decoy outputs")
+    enc.add_argument("--expire", type=int, default=0, help="Expiration in seconds")
+    enc.add_argument("--fec", action="store_true", help="Enable Forward Error Correction")
+    enc.add_argument("--compress", action="store_true", help="Enable compression")
+    enc.add_argument("--autowipe", type=int, default=0, help="Autowipe delay (seconds)")
+    enc.add_argument("--device-lock", action="store_true", help="Bind encryption to device fingerprint")
+    enc.set_defaults(func=cmd_encode)
 
-    dec = sp.add_parser("decode", help="Extract and decrypt message from stego files")
-    dec.add_argument("parts", nargs="+", help="Stego part files (order matters)")
-    dec.add_argument("-p", "--password", required=False, help="Password (will prompt if not provided)")
-    dec.add_argument("-s", "--profile", choices=list(core.SECURITY_PROFILES.keys()), default="nexus", help="Security profile")
-    dec.add_argument("--fec", action="store_true", help="Decode with FEC")
-    dec.add_argument("--compress", action="store_true", help="Decompress payload (zlib)")
-    dec.add_argument("--pepper", default=None, help="Optional pepper string if used during encode")
-    dec.add_argument("--device-lock", action="store_true", help="Set if encoded with device-lock")
+    # decode
+    dec = subparsers.add_parser("decode", help="Extract & decrypt message")
+    dec.add_argument("parts", nargs="+", help="Stego files (or parts) to decode from")
+    dec.add_argument("-p", "--password", required=True, help="Password")
+    dec.add_argument("-s", "--profile", choices=SECURITY_PROFILES.keys(), default="basic")
+    dec.add_argument("--pepper", default="", help="Optional pepper")
+    dec.add_argument("--autowipe", type=int, default=0, help="Autowipe delay (seconds)")
+    dec.add_argument("--device-lock", action="store_true", help="Require device fingerprint")
+    dec.set_defaults(func=cmd_decode)
 
-    sp.add_parser("selftest", help="Run a built-in self-test (encode->decode->expire->wipe)")
+    # wipe-message
+    wm = subparsers.add_parser("wipe-message", help="Wipe message bits in carriers")
+    wm.add_argument("parts", nargs="+", help="Files to wipe")
+    wm.add_argument("-p", "--password", required=True, help="Password")
+    wm.set_defaults(func=cmd_wipe_message)
 
-    wipe = sp.add_parser("wipe-message", help="Wipe embedded message bits from files (keeps file)")
-    wipe.add_argument("files", nargs="+", help="Files to wipe")
-    wipe.add_argument("-p", "--password", required=False, help="Password (optional). If provided, wipe-later may attempt body wipe when used in detached mode.")
+    # wipe-later
+    wl = subparsers.add_parser("wipe-later", help="Execute pending autowipe action")
+    wl.set_defaults(func=cmd_wipe_later)
 
-    wl = sp.add_parser("wipe-later", help="(Internal / debug) sleep then wipe payload bits (foreground).")
-    wl.add_argument("delay", type=int, help="Delay seconds")
-    wl.add_argument("files", nargs="+", help="Files to wipe")
-    wl.add_argument("--password", required=False, help="If provided, attempts to wipe payload body (not only header)")
-    wl.add_argument("--profile", default="nexus", choices=list(core.SECURITY_PROFILES.keys()))
-    wl.add_argument("--pepper", default=None)
-    wl.add_argument("--device-lock", action="store_true")
+    # selftest
+    st = subparsers.add_parser("selftest", help="Run self-test")
+    st.set_defaults(func=cmd_selftest)
 
-    man = sp.add_parser("manual", help="Display full manual")
-    return p
+    # manual
+    man = subparsers.add_parser("manual", help="Show manual text")
+    man.set_defaults(func=cmd_manual)
 
-def prompt_password_if_needed(cli_pw: Optional[str]) -> str:
-    if cli_pw:
-        return cli_pw
-    try:
-        return getpass.getpass("Password: ")
-    except Exception:
-        raise RuntimeError("Unable to read password from input; provide --password on command line")
+    return parser
 
-def main() -> int:
-    parser = create_parser()
-    if len(sys.argv) == 1:
-        print("No arguments given — running selftest (safe default). Use --help for usage.")
-        return core.selftest(verbose=False)
 
+# -------------------------------------------------------------------
+# ENTRY POINT
+# -------------------------------------------------------------------
+def main():
+    parser = build_parser()
     args = parser.parse_args()
+    args.func(args)
 
-    # enable debug mode if requested
-    if getattr(args, "debug", False):
-        os.environ["HYLEXCRYPT_DEBUG"] = "1"
-        core.logger.setLevel(core.logging.DEBUG)
-        logger.debug("Debug mode enabled (HYLEXCRYPT_DEBUG=1)")
-
-    try:
-        if args.cmd == "manual":
-            print(core.MANUAL_TEXT)
-            return 0
-
-        if args.cmd == "selftest":
-            return core.selftest(verbose=True)
-
-        if args.cmd == "encode":
-            password = prompt_password_if_needed(args.password)
-            pepper = args.pepper.encode() if args.pepper else None
-            try:
-                res = core.encode_to_carriers(
-                    args.carriers,
-                    args.outdir,
-                    args.message,
-                    password,
-                    profile_name=args.profile,
-                    create_decoys=args.decoys,
-                    expire_seconds=args.expire,
-                    use_fec=args.fec,
-                    compress=args.compress,
-                    pepper=pepper,
-                    bind_device=args.device_lock,
-                    autowipe=args.autowipe
-                )
-            except Exception as e:
-                core.friendly_log_exception("Encode failed", e)
-                return 1
-            # show results
-            print(core.GREEN + "Encode complete. Files written:" + core.RESET if hasattr(core, "GREEN") else "Encode complete. Files written:")
-            for w in res.get("written", []):
-                print("  ", w)
-            if res.get("decoys"):
-                print("Decoys:")
-                for d in res.get("decoys", []):
-                    print("  ", d)
-            # show autowipe note if requested
-            if args.autowipe and args.autowipe > 0:
-                logger.info("Autowipe scheduled in %ds (if supported by core).", args.autowipe)
-            return 0
-
-        if args.cmd == "decode":
-            password = prompt_password_if_needed(args.password)
-            pepper = args.pepper.encode() if args.pepper else None
-            try:
-                msg = core.decode_from_parts(
-                    args.parts,
-                    password,
-                    profile_name=args.profile,
-                    use_fec=args.fec,
-                    compress=args.compress,
-                    pepper=pepper,
-                    bind_device=args.device_lock
-                )
-                print(core.GREEN + "DECODE OK" + core.RESET if hasattr(core, "GREEN") else "DECODE OK")
-                print(msg)
-                return 0
-            except Exception as e:
-                core.friendly_log_exception("Decode failed", e)
-                return 1
-
-        if args.cmd == "wipe-message":
-            # password optional for header-only wipe; provided if you want body wipe attempt
-            password = args.password
-            try:
-                core.wipe_message_bits(args.files)
-                print(core.GREEN + "Wipe complete (embedded message bits removed; files intact)." + core.RESET if hasattr(core, "GREEN") else "Wipe complete (embedded message bits removed; files intact).")
-                return 0
-            except Exception as e:
-                core.friendly_log_exception("Wipe failed", e)
-                return 1
-
-        if args.cmd == "wipe-later":
-            password = args.password
-            pepper = args.pepper.encode() if args.pepper else None
-            try:
-                # runs in foreground here (useful for testing/debugging)
-                core.wipe_later_action(int(args.delay), args.files, password=password, profile_name=args.profile, pepper=pepper, bind_device=args.device_lock)
-                return 0
-            except Exception as e:
-                core.friendly_log_exception("wipe-later failed", e)
-                return 1
-
-        logger.error("Unknown command")
-        return 2
-
-    except KeyboardInterrupt:
-        print("\nInterrupted by user", file=sys.stderr)
-        return 130
-    except Exception as exc:
-        core.friendly_log_exception("Fatal error", exc)
-        return 1
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()

@@ -2,19 +2,9 @@
 # -*- coding: utf-8 -*-
 """
 HylexCrypt - The Ultimate 2050 - Unified Advanced Stego + Crypto Tool (single file)
-Run:hylexcrypt --help
 
-Features included:
- - Argon2id KDF (argon2-cffi)
- - AEAD: ChaCha20-Poly1305 or AES-GCM fallback
- - Optional device-lock binding (--device-lock)
- - Expiry timestamp inside payload (logical self-destruct)
- - Wipe-only embedded message (keeps carrier intact) via `wipe-message`
- - Scheduled wipe (detached) via `wipe-later` (spawned by --autowipe)
- - Reed-Solomon FEC (optional)
- - LSB stego for PNG/JPEG/WAV; DCT placeholder for JPEG (requires SciPy)
- - Selftest,manual and CLI
 """
+
 from __future__ import annotations
 import os
 import sys
@@ -86,6 +76,18 @@ if _missing:
     print("  pip install pillow numpy cryptography argon2-cffi scipy reedsolo colorama soundfile psutil")
     sys.exit(2)
 
+# --- Try import RSCodec in guarded way (some environments vary) ---
+if REEDSOLO_AVAILABLE:
+    try:
+        from reedsolo import RSCodec, ReedSolomonError
+    except Exception:
+        RSCodec = None
+        ReedSolomonError = Exception
+        REEDSOLO_AVAILABLE = False
+else:
+    RSCodec = None
+    ReedSolomonError = Exception
+
 # --- Constants / Profiles ---
 FIXED_HEADER_BYTES = 24      # header region: 16 bytes salt | 8 bytes ciphertext length
 HEADER_BIT_COUNT = FIXED_HEADER_BYTES * 8
@@ -99,25 +101,11 @@ SECURITY_PROFILES = {
 }
 
 # --- Logging ---
-logger = logging.getLogger("HylexCrypt2050")
+logger = logging.getLogger("Hylex2050")
 logger.setLevel(logging.INFO)
 _ch = logging.StreamHandler(sys.stdout)
 _ch.setFormatter(logging.Formatter("[%(asctime)s] [%(levelname)s] %(message)s", "%Y-%m-%d %H:%M:%S"))
 logger.handlers = [_ch]
-
-# --- Small helper for friendly exception messages ---
-def friendly_log_exception(context: str, exc: Exception) -> None:
-    """
-    Log a concise, user-friendly error message. Do not show a full traceback
-    unless HYLEX_DEBUG environment variable is set.
-    """
-    logger.error("%s: %s", context, exc)
-    if os.environ.get("HYLEXCRYPT_DEBUG"):
-        # developer wants the full traceback
-        import traceback
-        traceback.print_exc()
-    else:
-        logger.info("Set HYLEXCRYPT_DEBUG=1 to see a full traceback for debugging.")
 
 # --- Utilities ---
 def sha3_256(b: bytes) -> bytes:
@@ -137,18 +125,7 @@ def estimate_entropy(pw: str) -> float:
     if pools == 0: return 0.0
     return len(pw) * math.log2(pools)
 
-COMMON_PASSWORDS = {"password", "123456", "qwerty", "letmein", "admin", "welcome", 
-"111111","123456789","12345678","12345","1234567","abc123","password1","123123",
-"iloveyou","monkey","dragon","football","baseball","superman","sunshine","princess","login",
-"starwars","master","hello","freedom","whatever","qazwsx","trustno1","654321","jordan23","harley",
-"password123","hunter","thomas","joshua","1234","killer","ginger","pepper","maggie"
-"corvette","cheese","banana","summer","chelsea","computer","michael","tigger","ummer2024",
-"Admin@123","Password99","Football21","India@123","Krishna07","Qwerty@2023","Welcome#1","Dragon88",
-"Master1234","P@ssword2023","monkey!","login2020","freedom@99","chelsea21","superman7","hunter2",
-"baseball99","pepper123","TrustNo1!","hello2024","computer07","abcd1234","test@123","dragon#21",
-"Football2022","MyPass@123","Summer@2023","Krishna@!7","India$2024","Welcome123#","Secret@987",
-"Qwerty#2025","MasterKey@88","Sunshine#2023","ILoveYou#99","HappyDay@07","BlueSky@2024","P@55w0rd!",
-"LetMeIn@77","Monkey#123","Freedom@007","SecurePass#9","Xy8!aR@3qP","*Fp3uD7!zYc0"}
+COMMON_PASSWORDS = {"password", "123456", "qwerty", "letmein", "admin", "welcome", "111111"}
 
 def check_password_strength(pw: str) -> Tuple[bool, str]:
     if not pw: return False, "Empty password"
@@ -174,7 +151,6 @@ def derive_key(password: str, salt: bytes, length: int, profile: Dict[str, Any],
         secret += pepper
     if bind_device:
         secret += device_fingerprint()
-    # argon2.low_level.hash_secret_raw(secret, salt, time_cost, memory_cost, parallelism, hash_len, type)
     return hash_secret_raw(secret, salt, int(profile["kdf_time"]), int(profile["kdf_mem_kib"]), int(profile["kdf_par"]), length, Argon2Type.ID)
 
 # --- AEAD ---
@@ -200,15 +176,27 @@ def aead_decrypt(key: bytes, blob: bytes) -> bytes:
 
 # --- Reed-Solomon FEC helpers ---
 def fec_encode(data: bytes, nsym: int = RS_PARITY) -> bytes:
-    if not REEDSOLO_AVAILABLE:
+    if not REEDSOLO_AVAILABLE or RSCodec is None:
         return data
-    return reedsolo.rs_encode_msg(data, nsym=nsym)
+    r = RSCodec(nsym)
+    return r.encode(data)
 
 def fec_decode(data: bytes, nsym: int = RS_PARITY) -> bytes:
-    if not REEDSOLO_AVAILABLE:
+    if not REEDSOLO_AVAILABLE or RSCodec is None:
         return data
-    corrected, _, _ = reedsolo.rs_correct_msg(data, nsym=nsym)
-    return corrected
+    try:
+        r = RSCodec(nsym)
+        result = r.decode(data)
+        # result can be bytes or a tuple (decoded, corrections, ...)
+        if isinstance(result, tuple):
+            return result[0]
+        return result
+    except ReedSolomonError as exc:
+        # Raise a clearer error for upstream handling
+        raise RuntimeError(
+            "FEC decode failed: probably not FEC-encoded data, or too many errors to correct. "
+            "If you are decoding, try omitting --fec; if you encoded, ensure you encoded with --fec."
+        ) from exc
 
 # --- Deterministic PRNG from key + salt ---
 def prng_from_key_and_salt(key: bytes, salt: bytes) -> np.random.Generator:
@@ -218,28 +206,20 @@ def prng_from_key_and_salt(key: bytes, salt: bytes) -> np.random.Generator:
 
 # --- Evolutionary/adaptive position selector ---
 def evolve_positions(rng: np.random.Generator, data_size: int, bits_needed: int, trials: int = 8, gens: int = 4) -> np.ndarray:
-    """
-    Deterministic evolutionary-like selector. Returns sorted positions (0..data_size-1).
-    Uses fallback spacing when bits_needed is large relative to data_size.
-    """
     data_size = int(data_size)
     bits_needed = int(bits_needed)
     if bits_needed <= 0:
         return np.array([], dtype=np.int64)
     if bits_needed * 3 > data_size:
-        # if payload is dense, just choose relatively uniform positions
         pos = np.linspace(0, data_size - 1, num=bits_needed, dtype=np.int64)
         return np.sort(pos)
     best_pos = None
     best_score = float('inf')
     for g in range(gens):
         for t in range(trials):
-            # rng.choice may raise OverflowError if data_size too large for internal computations
-            # ensure data_size fits in Python int (it does) and bits_needed << data_size
             try:
                 pos = np.sort(rng.choice(data_size, size=bits_needed, replace=False))
             except Exception:
-                # fallback: sample via permutation and slice
                 perm = rng.permutation(data_size)
                 pos = np.sort(perm[:bits_needed])
             diffs = np.diff(pos)
@@ -350,10 +330,6 @@ def lsb_extract_wav(file_in: str, password: str, profile: Dict[str, Any], pepper
 
 # --- Packaging / encryption pipeline ---
 def package_payload(message: str, password: str, profile: Dict[str, Any], expire_seconds: int = 0, use_fec: bool = False, compress: bool = False, pepper: Optional[bytes] = None, bind_device: bool = False) -> Tuple[bytes, bytes]:
-    """
-    Build final payload: optionally compress, apply FEC, encrypt (AEAD), then prefix salt + len.
-    Returns (final_payload_bytes, salt_used)
-    """
     ts = int(time.time())
     pkg = {"hdr": "HYLEXV1", "timestamp": ts, "expire_seconds": int(expire_seconds), "message": message}
     serialized = json.dumps(pkg, separators=(',', ':')).encode('utf-8')
@@ -363,8 +339,6 @@ def package_payload(message: str, password: str, profile: Dict[str, Any], expire
     processed = serialized
     if use_fec and REEDSOLO_AVAILABLE:
         processed = fec_encode(processed)
-    # Prepend expire timestamp value so decoder can quickly know logical expiry
-    # But we already put expire_seconds in JSON; keep simple: encrypt whole processed.
     salt = secrets.token_bytes(CHUNK_SALT_LEN)
     key = derive_key(password, salt, 64, profile, pepper, bind_device)
     cipher_blob = aead_encrypt(key, processed)
@@ -385,7 +359,6 @@ def unpackage_payload(blob: bytes, password: str, profile: Dict[str, Any], use_f
         import zlib
         processed = zlib.decompress(processed)
     pkg = json.loads(processed.decode('utf-8'))
-    # check expiry in payload
     expire_seconds = int(pkg.get("expire_seconds", 0))
     ts = int(pkg.get("timestamp", 0))
     if expire_seconds and (time.time() > ts + expire_seconds):
@@ -441,22 +414,22 @@ def encode_to_carriers(carriers: List[str], out_dir: str, message: str, password
             decoys.append(str(outname))
     # schedule autowipe (detached) if requested
     if autowipe and autowipe > 0:
-        # spawn the same script in "wipe-later" mode; must pass password (user-aware security risk)
         files_to_wipe = written + decoys
         cmd = [sys.executable, str(Path(__file__).resolve()), "wipe-later", str(autowipe)] + files_to_wipe + ["--password", password]
-        # launched detached
         kwargs = {"stdout": subprocess.DEVNULL, "stderr": subprocess.DEVNULL, "close_fds": True}
         if os.name == "nt":
             kwargs["creationflags"] = subprocess.DETACHED_PROCESS
-        subprocess.Popen(cmd, **kwargs)
-        logger.info("Scheduled autowipe in %ds for %d files (background).", autowipe, len(files_to_wipe))
+        try:
+            subprocess.Popen(cmd, **kwargs)
+            logger.info("Scheduled autowipe in %ds for %d files (background).", autowipe, len(files_to_wipe))
+        except Exception:
+            logger.warning("Unable to schedule detached autowipe on this platform; autowipe skipped.")
     return {"written": written, "decoys": decoys, "salt": salt.hex()}
 
 def decode_from_parts(parts: List[str], password: str, profile_name: str = "nexus", use_fec: bool = False, compress: bool = False, pepper: Optional[bytes] = None, bind_device: bool = False) -> str:
     profile = SECURITY_PROFILES.get(profile_name)
     if profile is None:
         raise ValueError("Unknown profile")
-    # read first part to get payload header + body; this implementation expects whole payload in a single part for simplicity
     blob = b''
     for p in parts:
         pth = Path(p)
@@ -491,7 +464,6 @@ def secure_delete(path: str, passes: int = 3) -> bool:
             p.unlink()
         except Exception:
             pass
-        # posix shred if available
         if os.name == "posix" and shutil.which("shred"):
             try:
                 os.system(f'shred -u -n {passes} "{str(p)}" 2>/dev/null || true')
@@ -504,11 +476,6 @@ def secure_delete(path: str, passes: int = 3) -> bool:
 
 # --- Wipe embedded message bits (keep file intact) ---
 def wipe_message_bits(files: List[str]) -> None:
-    """
-    Zero the fixed header region (first HEADER_BIT_COUNT LSBs) and
-    optionally zero body LSBs depending on capacity detection.
-    This prevents decoding while keeping the carrier file.
-    """
     for f in files:
         p = Path(f)
         if not p.exists():
@@ -518,7 +485,6 @@ def wipe_message_bits(files: List[str]) -> None:
             if p.suffix.lower() in ('.wav',) and AUDIO_AVAILABLE:
                 data, sr = sf.read(str(p), dtype='int16')
                 flat = data.flatten().astype(np.int16)
-                # zero header LSBs
                 flat[:HEADER_BIT_COUNT] &= ~1
                 sf.write(str(p), flat.reshape(data.shape), sr, subtype='PCM_16')
             else:
@@ -537,7 +503,6 @@ def wipe_later_action(delay: int, files: List[str], password: Optional[str] = No
     logger.info("wipe-later sleeping %ds before wiping message bits on %d files", delay, len(files))
     try:
         time.sleep(delay)
-        # If password provided, attempt to wipe full payload region by recomputing positions; otherwise fallback to header-only wipe.
         if password:
             profile = SECURITY_PROFILES.get(profile_name, SECURITY_PROFILES["nexus"])
             for f in files:
@@ -547,7 +512,6 @@ def wipe_later_action(delay: int, files: List[str], password: Optional[str] = No
                     if p.suffix.lower() in ('.wav',) and AUDIO_AVAILABLE:
                         data, sr = sf.read(str(p), dtype='int16')
                         flat = data.flatten().astype(np.int16)
-                        # read header LSBs to find salt+len
                         header_bits = (flat[:HEADER_BIT_COUNT] & 1).astype(np.uint8)
                         header = np.packbits(header_bits).tobytes()[:FIXED_HEADER_BYTES]
                         salt = header[:CHUNK_SALT_LEN]
@@ -558,9 +522,7 @@ def wipe_later_action(delay: int, files: List[str], password: Optional[str] = No
                         rng = prng_from_key_and_salt(key_seed, salt)
                         pos = evolve_positions(rng, region, bits_needed)
                         pos = (pos + HEADER_BIT_COUNT).astype(np.int64)
-                        # zero out LSBs at positions
                         flat[pos] &= ~1
-                        # also zero header LSBs
                         flat[:HEADER_BIT_COUNT] &= ~1
                         sf.write(str(p), flat.reshape(data.shape), sr, subtype='PCM_16')
                     else:
@@ -585,17 +547,15 @@ def wipe_later_action(delay: int, files: List[str], password: Optional[str] = No
                 except Exception as e:
                     logger.error("Failed to wipe payload bits for %s: %s", p, e)
         else:
-            # fallback header-only wipe
             wipe_message_bits(files)
     except Exception as e:
         logger.error("wipe-later exception: %s", e)
 
 # --- Selftest / Demo helper ---
 def selftest(verbose: bool = False) -> int:
-    logger.info("Running self-test (encode->decode->expiry->wipe->wipelater)...")
+    logger.info("Running self-test (encode->decode->expiry->wipe demo)...")
     with tempfile.TemporaryDirectory() as tmp:
         tmpdir = Path(tmp)
-        # create carrier image
         c = tmpdir / "carrier.png"
         arr = np.zeros((128, 128, 3), dtype=np.uint8)
         for i in range(128):
@@ -603,40 +563,30 @@ def selftest(verbose: bool = False) -> int:
             arr[i, :, 1] = (i * 2) % 256
             arr[i, :, 2] = (i * 3) % 256
         Image.fromarray(arr).save(str(c))
-        # encode
         pwd = "Str0ngSelfT3st!2050"
         msg = "SELFTEST: " + secrets.token_hex(8)
         outdir = tmpdir / "out"
         outdir.mkdir()
-        try:
-            res = encode_to_carriers([str(c)], str(outdir), msg, pwd, profile_name="nexus", create_decoys=0, expire_seconds=2, use_fec=False, compress=False, pepper=None, bind_device=False, autowipe=None)
-        except Exception as e:
-            friendly_log_exception("Selftest encoding failed", e)
-            return 3
+        res = encode_to_carriers([str(c)], str(outdir), msg, pwd, profile_name="nexus", create_decoys=0, expire_seconds=2, use_fec=False, compress=False, pepper=None, bind_device=False, autowipe=None)
         if verbose:
             logger.info("Wrote files: %s", res["written"])
-        # decode immediately
         try:
             decoded = decode_from_parts([res["written"][0]], pwd, "nexus", use_fec=False, compress=False, pepper=None, bind_device=False)
             if decoded != msg:
                 logger.error("Selftest decode mismatch")
                 return 2
         except Exception as e:
-            friendly_log_exception("Selftest decode error", e)
+            logger.error("Selftest decode error: %s", e)
             return 3
         logger.info("Selftest decode OK (before expiry)")
-        # wait expiry
         time.sleep(3)
-        # decode after expiry must fail
         try:
             _ = decode_from_parts([res["written"][0]], pwd, "nexus", use_fec=False, compress=False, pepper=None, bind_device=False)
             logger.error("Selftest: expected expiry but decode succeeded")
             return 4
         except Exception:
             logger.info("Selftest expiry behaviour OK")
-        # perform wipe (header-only)
         wipe_message_bits(res["written"])
-        # decode must now fail
         try:
             _ = decode_from_parts([res["written"][0]], pwd, "nexus", use_fec=False, compress=False, pepper=None, bind_device=False)
             logger.error("Selftest: expected decode failure after wipe but succeeded")
@@ -671,20 +621,19 @@ Major features:
 Quick examples
 --------------
 1) Encode a message into one PNG carrier:
-   hylexcrypt encode carrier.png -o outdir -m "Top Secret" -p "StrongPass!2025"
+   python cli.py encode carrier.png -o outdir -m "Top Secret" -p "StrongPass!2025"
 
 2) Decode:
-   hylexcrypt decode outdir/carrier_stego.png -p "StrongPass!2025"
+   python cli.py decode outdir/carrier_stego.png -p "StrongPass!2025"
 
 3) Encode with expiry (message expires logically after 60s):
-   hylexcrypt encode carrier.png -o outdir -m "Ephemeral" -p "Pass!" --expire 60
+   python cli.py encode carrier.png -o outdir -m "Ephemeral" -p "Pass!" --expire 60
 
 4) Wipe embedded message bits in place (keeps file):
-   hylexcrypt wipe-message outdir/carrier_stego.png
+   python cli.py wipe-message outdir/carrier_stego.png
 
 5) Schedule a background wipe (autowipe) that runs detached:
-   hylexcrypt encode carrier.png -o outdir -m "AutoWipe" -p "Pass!" --autowipe 120
-   (This schedules a background process that will wipe the payload bits after 120 seconds.)
+   python cli.py encode carrier.png -o outdir -m "AutoWipe" -p "Pass!" --autowipe 120
 
 Security notes
 --------------
@@ -697,12 +646,11 @@ Requirements
  - Python 3.9+
  - Required: pillow, numpy, cryptography, argon2-cffi
  - Optional (recommended): scipy, reedsolo, soundfile, colorama, psutil
-
 """
 
 # --- CLI Parser ---
 def create_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(prog="hylexcrypt", description="HylexCrypt - The Ultimate 2050 - stego + crypto")
+    p = argparse.ArgumentParser(prog="hylexcrypt", description="HylexCrypt Ultimate 2050 - stego + crypto")
     sp = p.add_subparsers(dest="cmd", required=True)
 
     enc = sp.add_parser("encode", help="Embed and encrypt message into carriers")
@@ -742,10 +690,9 @@ def create_parser() -> argparse.ArgumentParser:
     wl.add_argument("--device-lock", action="store_true")
 
     man = sp.add_parser("manual", help="Display full manual")
-
     return p
 
-# --- main ---
+# --- main with user-friendly error messages (no stack traces) ---
 def main() -> int:
     parser = create_parser()
     if len(sys.argv) == 1:
@@ -790,16 +737,42 @@ def main() -> int:
             return 0
 
         if args.cmd == "wipe-later":
-            # run as foreground utility for debugging; normally this is spawned detached by autowipe
             pepper = args.pepper.encode() if args.pepper else None
             wipe_later_action(int(args.delay), args.files, password=args.password, profile_name=args.profile, pepper=pepper, bind_device=args.device_lock)
             return 0
 
         logger.error("Unknown command")
         return 2
+
     except Exception as e:
-        # Friendly reporting - no traceback unless HYLEXCRYPT_DEBUG=1 is set
-        friendly_log_exception("Fatal error", e)
+        # Hide stack trace; present a clear friendly message and actionable hints
+        msg = str(e) if str(e) else type(e).__name__
+        print(RED + "ERROR:" + RESET, msg)
+        # Provide tailored suggestions for common error types
+        if isinstance(e, FileNotFoundError):
+            print("Suggestion: One or more input files were not found. Check the file paths you provided.")
+        elif isinstance(e, ValueError):
+            # generic value errors often are capacity, payload length or expired
+            if "payload too large" in msg.lower() or "capacity" in msg.lower():
+                print("Suggestion: Carrier does not have enough capacity for the payload. Try smaller message or larger carrier, or use multiple carriers.")
+            elif "expired" in msg.lower():
+                print("Suggestion: The message has expired (self-destructed). Encoding used an expiry time.")
+            else:
+                print("Suggestion: A value error occurred. Check the command flags and inputs.")
+        elif REEDSOLO_AVAILABLE and isinstance(e, RuntimeError) and "FEC decode failed" in msg:
+            print("FEC troubleshooting:")
+            print(" - If you encoded without --fec, decode without --fec.")
+            print(" - If you encoded with --fec, ensure you decode with --fec and that the file is not corrupted.")
+            print(" - Verify password / device-lock / pepper match the original encode operation.")
+        elif REEDSOLO_AVAILABLE and isinstance(e, ReedSolomonError):
+            print("ReedSolomonError: Too many errors to correct. Likely payload corruption or mismatched FEC usage.")
+            print("Suggestion: Try decoding without --fec if you didn't encode with --fec.")
+        else:
+            print("General troubleshooting:")
+            print(" - Ensure you used the same password, pepper and device-lock flags at decode as you did at encode.")
+            print(" - Try running 'selftest' to validate your installation: python cli.py selftest")
+            print(" - If this error persists, capture the short error message above and contact the developer with that message.")
+        # Do NOT print traceback / source code
         return 1
 
 if __name__ == "__main__":

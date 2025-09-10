@@ -177,16 +177,27 @@ def aead_decrypt(key: bytes, blob: bytes) -> bytes:
     raise ValueError("Unknown AEAD tag")
 
 # --- Reed-Solomon FEC helpers ---
+from reedsolo import RSCodec, ReedSolomonError
 def fec_encode(data: bytes, nsym: int = RS_PARITY) -> bytes:
     if not REEDSOLO_AVAILABLE:
         return data
-    return reedsolo.rs_encode_msg(data, nsym=nsym)
+    r = RSCodec(nsym)    
+    return r.encode(data)
 
 def fec_decode(data: bytes, nsym: int = RS_PARITY) -> bytes:
     if not REEDSOLO_AVAILABLE:
         return data
-    corrected, _, _ = reedsolo.rs_correct_msg(data, nsym=nsym)
-    return corrected
+    try:
+        r = RSCodec(nsym)
+        result = r.decode(data)
+        if isinstance(result, tuple):
+          return result[0]
+        return result  
+    except ReedSolomonError as exc:        
+       raise RuntimeError(
+        "FEC decode failed: probably not FEC-encoded data or too many errors."
+        "Check that encoding used --fec and that password/pepper/device-lock are correct."
+       )from exc   
 
 # --- Deterministic PRNG from key + salt ---
 def prng_from_key_and_salt(key: bytes, salt: bytes) -> np.random.Generator:
