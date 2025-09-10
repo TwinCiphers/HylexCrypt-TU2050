@@ -67,7 +67,7 @@ homepage = "https://github.com/TwinCiphers/HylexCrypt-TU2050"
 documentation = "https://HylexCrypt-TU2050.readthedocs.io"
 repository = "https://github.com/TwinCiphers/HylexCrypt-TU2050"
 bug_tracker = "https://github.com/TwinCiphers/HylexCrypt-TU2050/issues"
-changelog = "https://github.com/TwinCiphers/HylexCrypt-TU2050/blob/main/CHANGELOG.md"
+changelog = "https://github.com/TwinCiphers/HylexCrypt-TU2050/blob/main/changelog.md"
 
 # Simple console script mapping (PEP 621)
 [project.scripts]
