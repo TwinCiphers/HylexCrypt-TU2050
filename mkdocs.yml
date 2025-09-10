@@ -1,0 +1,35 @@
+site_name: HylexCrypt Docs
+site_url: https://TwinCiphers.github.io/HylexCrypt-TU2050
+theme:
+  name: material
+  language: en
+  palette:
+    - scheme: slate
+      primary: cyan
+      accent: pink
+  font: false    # disable default Roboto to use Google Orbitron
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.instant
+    - navigation.expand
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.tabs.link
+    - content.action.edit
+    - content.footnotes
+    - header.autohide
+
+extra_css:
+  - stylesheets/extra.css
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true

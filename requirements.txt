@@ -1,0 +1,8 @@
+pillow==10.0.0
+numpy==1.26.0
+cryptography==41.0.0
+argon2-cffi==23.1.0
+scipy==1.11.0
+reedsolo==1.7.0
+colorama==0.4.6
+psutil==5.9.5

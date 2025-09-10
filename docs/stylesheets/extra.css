@@ -1,0 +1,59 @@
+/* 🚀 Import Orbitron sci-fi font */
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+
+/* 🌌 Headings with sci-fi font + neon glow */
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Orbitron', sans-serif !important;
+  letter-spacing: 1px;
+  text-shadow: 0 0 5px #00f7ff, 0 0 15px #ff00f7;
+}
+
+/* 🔮 Apply Orbitron to navigation */
+.md-nav__title,
+.md-nav__link,
+.md-tabs__link {
+  font-family: 'Orbitron', sans-serif !important;
+  color: #fffffff3 !important;
+  font-weight: bold;
+}
+
+/* 🟦 Glassmorphism navbar */
+.md-header {
+  background: rgba(20, 20, 20, 0.75) !important;
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 20px rgba(0, 255, 255, 0.2);
+}
+
+/* ⚡ Futuristic buttons */
+.md-button {
+  background: #111;
+  border: 2px solid #00f7ff;
+  color: #00f7ff !important;
+  font-family: 'Orbitron', sans-serif;
+  box-shadow: 0 0 15px #00f7ff;
+  transition: 0.3s;
+}
+.md-button:hover {
+  box-shadow: 0 0 25px #ff00f7, 0 0 40px #00f7ff;
+  transform: scale(1.05);
+  border-color: #ff00f7;
+  color: #ff00f7 !important;
+}
+
+/* 💻 Code blocks with neon frame */
+.md-typeset pre {
+  border: 2px solid #00f7ff;
+  box-shadow: 0 0 20px #00f7ff33;
+  border-radius: 8px;
+}
+
+/* 🌈 Glow animation for titles */
+@keyframes glow {
+  0% { text-shadow: 0 0 5px #00f7ff; }
+  50% { text-shadow: 0 0 20px #ff00f7; }
+  100% { text-shadow: 0 0 5px #00f7ff; }
+}
+h1 {
+  animation: glow 6s infinite alternate;
+}
