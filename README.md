@@ -6,6 +6,8 @@ HylexCrypt - The Ultimate 2050 is an **all-in-one steganography and encryption t
 It encrypts secret messages with modern cryptographic algorithms and hides them inside files (images, audio, etc.) using steganography — producing normal-looking files that secretly contain secure information.
 
 ---
+## 📖 Documentation
+View the Complete Documentation here [HylexCrypt-Docs](https://hackmd.io/@hylexcrypt-tu2050/SkRnM51ogl)
 
 ## ✨ Features
 
@@ -117,6 +119,6 @@ AES-GCM Mode Overview
 ChaCha20-Poly1305 RFC 8439
 Reed–Solomon Codes
 
-⚠️ Disclaimer: 
-This project is for educational and lawful security research only(As this is the starting phase).
-The authors and contributors are not liable for misuse.
+### ⚠️ Disclaimer  
+This project is for **educational and lawful security research only** (as this is the starting phase).  
+The authors and contributors are **not liable for misuse**.
