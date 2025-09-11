@@ -7,7 +7,7 @@ It encrypts secret messages with modern cryptographic algorithms and hides them 
 
 ---
 ## 📖 Documentation
-view the Complete Documentation here [HylexCrypt-Docs](https://hackmd.io/@hylexcrypt-tu2050/SkRnM51ogl)
+View the Complete Documentation here [HylexCrypt-Docs](https://hackmd.io/@hylexcrypt-tu2050/SkRnM51ogl)
 
 ## ✨ Features
 
