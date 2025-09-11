@@ -117,6 +117,9 @@ AES-GCM Mode Overview
 ChaCha20-Poly1305 RFC 8439
 Reed–Solomon Codes
 
+## 📖 Documentation
+view the Complete Documentation here [HylexCrypt-TU2050 Docs](https://hackmd.io/@hylexcrypt-tu2050/SkRnM51ogl)
+
 ⚠️ Disclaimer: 
 This project is for educational and lawful security research only(As this is the starting phase).
 The authors and contributors are not liable for misuse.
