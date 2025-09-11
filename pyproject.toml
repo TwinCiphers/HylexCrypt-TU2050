@@ -64,7 +64,7 @@ monitor = ["psutil"]
 
 [project.urls]
 homepage = "https://github.com/TwinCiphers/HylexCrypt-TU2050"
-documentation = "https://HylexCrypt-TU2050.readthedocs.io"
+documentation = "https://hackmd.io/@hylexcrypt-tu2050/SkRnM51ogl"
 repository = "https://github.com/TwinCiphers/HylexCrypt-TU2050"
 bug_tracker = "https://github.com/TwinCiphers/HylexCrypt-TU2050/issues"
 changelog = "https://github.com/TwinCiphers/HylexCrypt-TU2050/blob/main/changelog.md"
