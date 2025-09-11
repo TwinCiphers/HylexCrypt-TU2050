@@ -119,7 +119,10 @@ Reed–Solomon Codes
 
 ## 📖 Documentation
 view the Complete Documentation here [HylexCrypt-TU2050 Docs](https://hackmd.io/@hylexcrypt-tu2050/SkRnM51ogl)
+## 📖 Documentation  
+View the complete documentation here 👉 [HylexCrypt-TU2050 Docs](https://hackmd.io/@hylexcrypt-tU2050/Ske-m5tag1)
+---
 
-⚠️ Disclaimer: 
-This project is for educational and lawful security research only(As this is the starting phase).
-The authors and contributors are not liable for misuse.
+### ⚠️ Disclaimer  
+This project is for **educational and lawful security research only** (as this is the starting phase).  
+The authors and contributors are **not liable for misuse**.
