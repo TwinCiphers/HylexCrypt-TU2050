@@ -1,3 +1,18 @@
+# Copyright 2025 TwinCiphers
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -621,20 +636,30 @@ Major features:
 Quick examples
 --------------
 1) Encode a message into one PNG carrier:
-   python cli.py encode carrier.png -o outdir -m "Top Secret" -p "StrongPass!2025"
+   hylexcrypt encode carrier.png -o outdir -m "Top Secret" -p "StrongPass!2025"
 
 2) Decode:
-   python cli.py decode outdir/carrier_stego.png -p "StrongPass!2025"
+   hylexcrypt decode outdir/carrier_stego.png -p "StrongPass!2025"
 
 3) Encode with expiry (message expires logically after 60s):
-   python cli.py encode carrier.png -o outdir -m "Ephemeral" -p "Pass!" --expire 60
+   hylexcrypt encode carrier.png -o outdir -m "Ephemeral" -p "Pass!" --expire 60
 
 4) Wipe embedded message bits in place (keeps file):
-   python cli.py wipe-message outdir/carrier_stego.png
+   hylexcrypt wipe-message outdir/carrier_stego.png
 
 5) Schedule a background wipe (autowipe) that runs detached:
-   python cli.py encode carrier.png -o outdir -m "AutoWipe" -p "Pass!" --autowipe 120
+   hylexcrypt encode carrier.png -o outdir -m "AutoWipe" -p "Pass!" --autowipe 120
 
+ Avail Flags: 
+  --fec
+  --autowipe
+  --decoys
+  --compress
+  --device-lock
+  --expire
+  --pepper
+  --profile
+    
 Security notes
 --------------
  - Never share passwords on the command line in multi-user environments.
@@ -646,6 +671,10 @@ Requirements
  - Python 3.9+
  - Required: pillow, numpy, cryptography, argon2-cffi
  - Optional (recommended): scipy, reedsolo, soundfile, colorama, psutil
+
+ For Full Documentation visit:
+ -----------------------------
+ https://hackmd.io/@hylexcrypt-tu2050/SkRnM51ogl
 """
 
 # --- CLI Parser ---

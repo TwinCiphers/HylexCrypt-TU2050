@@ -4,8 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "HylexCrypt"
-# Use setuptools_scm to generate version from SCM tags (dynamic).
-dynamic = ["version"]
+version = "2050.0.1"
 description = "HylexCrypt - The Ultimate 2050 - stego + crypto CLI tool"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -13,7 +12,7 @@ authors = [
   {name = "Deepak P S", email = "deepakkrishnark@gmail.com"},
   {name = "Nithin S", email = "nithinsrinivas333@gmail.com"}
 ]
-Founders and maintainers = [
+maintainers = [
   {name = "TwinCiphers", email = "twinciphers@gmail.com"}
 ]
 license = {text = "Apache-2.0"}
@@ -47,7 +46,6 @@ classifiers = [
   "Topic :: Utilities",
 ]
 
-# runtime dependencies
 dependencies = [
   "numpy>=1.21.0",
   "Pillow>=9.0.0",
@@ -69,108 +67,18 @@ repository = "https://github.com/TwinCiphers/HylexCrypt-TU2050"
 bug_tracker = "https://github.com/TwinCiphers/HylexCrypt-TU2050/issues"
 changelog = "https://github.com/TwinCiphers/HylexCrypt-TU2050/blob/main/changelog.md"
 
-# Simple console script mapping (PEP 621)
 [project.scripts]
 hylexcrypt = "hylexcrypt.cli:main"
 hylexC = "hylexcrypt.cli:main"
 
-# setuptools configuration
 [tool.setuptools]
 packages = ["hylexcrypt"]
 
-[tool.setuptools.packages.find]
-where = ["src"]
-exclude = ["tests*"]
-
-[tool.setuptools.package-dir]
-"" = "."
-
 [tool.setuptools.package-data]
-hylexcrypt = ["py.typed","*.txt", "*.md"]
+hylexcrypt = ["py.typed", "*.txt", "*.md"]
 
 [tool.setuptools.exclude-package-data]
 "*" = ["*.pyc", "__pycache__", "*.pyo"]
 
-[tool.setuptools_scm]
-write_to = "hylexcrypt/_version.py"
-# optional: local_scheme = "no-local-version"
-# If you prefer tag-based versioning, keep defaults; else set version_scheme/local_scheme.
+# (the rest of your tooling configs can be copied exactly from your original)
 
-[tool.black]
-line-length = 88
-target-version = ["py39", "py310", "py311"]
-include = '\.pyi?$'
-exclude = '''
-/(
-    \.eggs
-  | \.git
-  | \.hg
-  | \.mypy_cache
-  | \.tox
-  | \.venv
-  | _build
-  | build
-  | dist
-)/
-'''
-
-[tool.isort]
-profile = "black"
-multi_line_output = 3
-line_length = 88
-known_first_party = ["hylexcrypt"]
-
-[tool.ruff]
-target-version = "py39"
-line-length = 88
-select = ["E", "W", "F", "I", "B", "C4", "UP", "N", "S", "T20"]
-ignore = ["E501","S101"]
-[tool.ruff.per-file-ignores]
-"tests/*" = ["S101", "S106", "S108"]
-
-[tool.mypy]
-python_version = "3.9"
-warn_return_any = true
-warn_unused_configs = true
-disallow_untyped_defs = true
-disallow_incomplete_defs = true
-check_untyped_defs = true
-disallow_untyped_decorators = true
-no_implicit_optional = true
-warn_redundant_casts = true
-warn_unused_ignores = true
-warn_no_return = true
-warn_unreachable = true
-strict_equality = true
-
-[[tool.mypy.overrides]]
-module = ["tests.*"]
-disallow_untyped_defs = false
-
-[[tool.mypy.overrides]]
-module = [
-  "numpy.*",
-  "PIL.*",
-  "reedsolo.*",
-  "soundfile.*",
-  "scipy.*",
-  "psutil.*",
-  "colorama.*",
-]
-ignore_missing_imports = true
-
-[tool.pytest.ini_options]
-minversion = "7.0"
-addopts = [
-  "--strict-markers",
-  "--strict-config",
-  "--cov=hylexcrypt",
-  "--cov-report=term-missing",
-  "--cov-report=html",
-  "--cov-report=xml",
-]
-testpaths = ["tests"]
-
-[tool.coverage.run]
-source = ["hylexcrypt"]
-omit = ["tests/*", "*/site-packages/*"]

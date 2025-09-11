@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [1.0.0] - 2025-09-07
+## [2050.0.1] - 2025-09-07
 ### Added
 - Initial stable release of **HylexCrypt TU2050**
 - Argon2id KDF with configurable security profiles  
@@ -26,7 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Auto-wipe feature for sensitive data  
 - Steganography module (embed/extract messages)  
 - Compression and error correction support  
-- CLI tool with easy entry point: `hylexcrypt`  
-- Full documentation setup with Sphinx + ReadTheDocs  
+- CLI tool with easy entry point: `hylexcrypt` & `hylexC` 
+- Full documentation  
 
 ---

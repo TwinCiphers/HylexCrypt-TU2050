@@ -1,194 +1,119 @@
-# HylexCrypt-TU2050 — Usage Guide
+# HylexCrypt-TU2050 – Research & Whitepaper Notes
 
-Table of contents
------------------
-- Prerequisites and installation
-- Running self-test
-- Basic encode/decode examples
-- Advanced encoding options
-- Device-lock and Pepper
-- Wipe & Autowipe
-- Decoys and Recovery
-- Troubleshooting & error messages
-- Operational security guidance
-- Packaging, CI & builds
-- Examples and workflows
+## 1. Introduction
+HylexCrypt TU2050 is a unified steganography + cryptography framework designed with **future-ready security models**.  
+Unlike traditional tools that treat stego and crypto separately, HylexCrypt integrates both into a **single secure pipeline**, ensuring payload confidentiality, integrity, and stealth.
 
-Prerequisites and installation
-------------------------------
-- Python 3.9+
-- Core deps:
-  pip install pillow numpy cryptography argon2-cffi
-- Optional:
-  pip install scipy reedsolo soundfile colorama psutil
+This document is intended for researchers, security engineers, and advanced practitioners who want deeper insights into the design choices, limitations, and future roadmap of HylexCrypt.
 
-Running self-test
------------------
-hylexcrypt selftest
+---
 
-Basic encode/decode
--------------------
-Encode:
-hylexcrypt encode cover.png -o out -m "Top Secret" -p "Pass"
+## 2. Cryptographic Rationale
 
-Decode:
-hylexcrypt decode out/cover_stego.png -p "Pass"
+### 2.1 KDF & Keying
+- **Argon2id (argon2-cffi)** is chosen as the Key Derivation Function (KDF).  
+  - Resistant to GPU/ASIC cracking (memory-hard).
+  - Configurable profiles: `basic`, `nexus`, `transcendent`.
+- **Device-lock binding** introduces *contextual binding* (keys bound to a specific device fingerprint).
 
-Advanced encoding
------------------
-Profiles: --profile basic|nexus|transcendent
---compress (zlib)
---fec (Reed–Solomon)
---decoys N
+### 2.2 Encryption
+- **AEAD (Authenticated Encryption with Associated Data)** is the backbone.
+  - **ChaCha20-Poly1305** preferred (speed, side-channel resistance).
+  - **AES-GCM fallback** (hardware-accelerated on modern CPUs).
+- Provides both **confidentiality** and **integrity**.
 
-Device-lock and Pepper
-----------------------
---pepper "text" adds extra secret to KDF
---device-lock binds to device fingerprint
+### 2.3 Expiry & Ephemeral Security
+- **Logical self-destruct**: Payloads carry embedded expiry timestamps.
+- **Autowipe/Wipe-later**: Background tasks to zeroize hidden message bits post-usage.
+- **Wipe-message**: Removes only hidden data, preserving carrier file.
 
-Wipe & Autowipe
----------------
-wipe-message:
-hylexcrypt wipe-message file.png
+---
 
-autowipe:
-hylexcrypt encode cover.png -o out -m "Msg" -p "Pass" --autowipe 120
+## 3. Steganographic Methods
 
-Decoys and Recovery
--------------------
---decoys N generates decoys. Recovery files planned.
+### 3.1 LSB-Based Hiding
+- Works for PNG, JPEG (RGB channels), and WAV audio.
+- **Evolutionary position selector** ensures pseudo-random embedding positions → reduces detectability.
 
-Troubleshooting
----------------
-Missing required packages → install deps
-Declared ciphertext length too large → wrong password or corruption
-Carrier too small → use bigger carrier
-Message expired → expiry triggered
+### 3.2 Optional DCT Transform (JPEG, if SciPy installed)
+- Placeholder implementation for frequency-domain embedding.
 
-Operational security
---------------------
-- Avoid showing passwords on CLI
-- Prefer pepper files
-- Device-lock reduces portability
-- Beware autowipe background password processes
+### 3.3 Error Resilience
+- **Reed-Solomon FEC**: Protects against partial corruption.
+- **Zlib compression**: Optional to shrink payloads and increase entropy.
 
-Packaging, CI & builds
-----------------------
-- pyproject.toml + setuptools_scm
-- MkDocs + Material recommended
-- Sphinx + myst-parser for ReadTheDocs
+---
 
-Examples
---------
-Multi-carrier:
-encode:
-hylexcrypt encode c1.png c2.png -o out -m "Large" -p "Str0ng!" --fec --compress
+## 4. Comparison with Existing Tools
 
-decode:
-hylexcrypt decode out/file.png -p "Pass"
+| Feature            | HylexCrypt TU2050 | Steghide | OpenStego | OutGuess |
+|--------------------|------------------ |----------|-----------|----------|
+| KDF Security       | Argon2id          | PBKDF2   | None      | None     |
+| Encryption         | ChaCha20/AES-GCM  | DES/AES  | AES       | None     |
+| Device Binding     | ✔                | ❌        | ❌        | ❌       |
+| Expiry / Autowipe  | ✔                | ❌        | ❌        | ❌       |
+| FEC Support        | ✔ (Reed-Solomon )| ❌        | ❌        | ❌       |
+| Audio Support      | ✔ (WAV LSB)      | ❌        | ❌        | ❌       |
+| Decoys / Diversion | ✔                | ❌        | ❌        | ❌       |
+| Self-Test / CI     | ✔                | ❌        | ❌        | ❌       |
 
-Wipe after decode:
-hylexcrypt wipe-message out/file.png
+**Conclusion:** HylexCrypt surpasses traditional tools in **resilience, adaptability, and operational security**.
 
-Manual:
-hylexcrypt manual
+---
 
-help:
-hylexcrypt --help [-h]
-# HylexCrypt-TU2050 — Usage Guide
+## 5. Limitations & Attack Surface
 
-Table of contents
------------------
-- Prerequisites and installation
-- Running self-test
-- Basic encode/decode examples
-- Advanced encoding options
-- Device-lock and Pepper
-- Wipe & Autowipe
-- Decoys and Recovery
-- Troubleshooting & error messages
-- Operational security guidance
-- Packaging, CI & builds
-- Examples and workflows
+1. **Statistical Steganalysis**  
+   - Advanced steganalysis (RS analysis, deep-learning detectors) may still detect anomalies in pixel/bit distributions.  
+   - Evolutionary embedding helps but does not make detection impossible.
 
-Prerequisites and installation
-------------------------------
-- Python 3.9+
-- Core deps:
-  pip install pillow numpy cryptography argon2-cffi
-- Optional:
-  pip install scipy reedsolo soundfile colorama psutil
+2. **Password Weakness**  
+   - Weak user passwords undermine Argon2id benefits.  
+   - HylexCrypt warns users about entropy, but human factors remain.
 
-Running self-test
------------------
-hylexcrypt selftest
+3. **Operational Risks**  
+   - Autowipe/wipe-later requires plaintext password passed to background subprocess (security trade-off).  
+   - Device-lock may fail if hardware details change (new NIC, virtualization, etc.).
 
-Basic encode/decode
--------------------
-Encode:
-hylexcrypt encode cover.png -o out -m "Top Secret" -p "Pass"
+---
 
-Decode:
-hylexcrypt decode out/cover_stego.png -p "Pass"
+## 6. Future Directions
 
-Advanced encoding
------------------
-Profiles: --profile basic|nexus|transcendent
---compress (zlib)
---fec (Reed–Solomon)
---decoys N
+- **Quantum Resistance**:  
+  Integrate post-quantum algorithms (Kyber, Dilithium) as additional layers once mature Python bindings stabilize.
 
-Device-lock and Pepper
-----------------------
---pepper "text" adds extra secret to KDF
---device-lock binds to device fingerprint
+- **Neural Steganography**:  
+  Use GAN-based embedding for higher undetectability compared to LSB/DCT.
 
-Wipe & Autowipe
----------------
-wipe-message:
-hylexcrypt wipe-message file.png
+- **Multi-Carrier Distribution**:  
+  Split payloads across images + audio + text carriers with automatic recombination.
 
-autowipe:
-hylexcrypt encode cover.png -o out -m "Msg" -p "Pass" --autowipe 120
+- **Zero-Knowledge Verification**:  
+  Introduce a feature where recipients can verify authenticity without revealing the full message.
 
-Decoys and Recovery
--------------------
---decoys N generates decoys. Recovery files planned.
+---
 
-Troubleshooting
----------------
-Missing required packages → install deps
-Declared ciphertext length too large → wrong password or corruption
-Carrier too small → use bigger carrier
-Message expired → expiry triggered
+## 7. TwinCiphers Formation & Philosophy
 
-Operational security
---------------------
-- Avoid showing passwords on CLI
-- Prefer pepper files
-- Device-lock reduces portability
-- Beware autowipe background password processes
+**TwinCiphers** was formed in 2025 as a collaboration between:
+- **Deepak P S** (lead developer, cryptographic systems)
+- **Nithin S** (co-developer, System integration,tooling)
 
-Packaging, CI & builds
-----------------------
-- pyproject.toml + setuptools_scm
-- MkDocs + Material recommended
-- Sphinx + myst-parser for ReadTheDocs
+### Mission
+To push **beyond contemporary security tools** and build **future-resilient encryption + steganography frameworks** for research, and defense applications.
 
-Examples
---------
-Multi-carrier:
-encode:
-hylexcrypt encode c1.png c2.png -o out -m "Large" -p "Str0ng!" --fec --compress
+### Core Values
+- **Transparency**: Open-source, reproducible builds.
+- **Adaptability**: Works with multiple carriers and devices.
+- **Futurism**: Designed for the 2050 security landscape, anticipating threats like quantum computing and AI-based steganalysis.
 
-decode:
-hylexcrypt decode out/file.png -p "Pass"
+---
 
-Wipe after decode:
-hylexcrypt wipe-message out/file.png
+## 8. Conclusion
+HylexCrypt TU2050 is not just a stego-crypto tool, but a **research testbed for future-ready security systems**.  
+It combines modern cryptography, adaptive embedding, and operational safeguards (expiry, wipe, autowipe).  
 
-Manual:
-hylexcrypt manual
+While not unbreakable, it **raises the bar significantly** compared to legacy tools and serves as a foundation for **next-generation information hiding systems**.
 
-help:
-hylexcrypt --help [-h]
+---
+

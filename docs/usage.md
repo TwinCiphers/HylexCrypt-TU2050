@@ -22,6 +22,8 @@ Prerequisites and installation
 - Optional:
   pip install scipy reedsolo soundfile colorama psutil
 
+**you can use** : hylexC or hylexcrypt
+
 Running self-test
 -----------------
 hylexcrypt selftest
@@ -40,6 +42,7 @@ Profiles: --profile basic|nexus|transcendent
 --compress (zlib)
 --fec (Reed–Solomon)
 --decoys N
+--autowipe
 
 Device-lock and Pepper
 ----------------------

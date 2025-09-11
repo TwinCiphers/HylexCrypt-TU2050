@@ -58,7 +58,7 @@ Security & design notes
 
 Authors, TwinCiphers formation & acknowledgements, Assitance
 ------------------------------------------------------------
-Authors: Deepak P S (cryptography, algorithms, systems integration) & Nithin S (design, tooling)
+Authors: Deepak P S (cryptography, algorithms, systems integration) & Nithin S (System integration,Cryptography, tooling)
 
 TwinCiphers (maintainers): security research & tooling collective focusing on steganography and privacy-preserving workflows.
 
