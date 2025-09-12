@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [2050.1.0] - 2025-09-12
+## [2050.1.1] - 2025-09-12
 ### Added
 - Initial stable release of **HylexCrypt TU2050**
 - Argon2id KDF with configurable security profiles  
