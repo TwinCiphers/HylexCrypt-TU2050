@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "HylexCrypt"
-version = "2050.1.0"
+version = "2050.1.1"
 description = "HylexCrypt - The Ultimate 2050 - stego + crypto CLI tool"
 readme = "README.md"
 requires-python = ">=3.9"
