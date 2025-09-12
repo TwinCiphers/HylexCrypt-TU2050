@@ -1,4 +1,3 @@
-# hylexcrypt/__init__.py
 from . import cli, core
 __all__ = ["cli", "core"]
 
