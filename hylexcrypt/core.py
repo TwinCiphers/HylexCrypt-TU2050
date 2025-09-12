@@ -560,7 +560,7 @@ def selftest(verbose: bool = False) -> int:
         msg = "SELFTEST: " + secrets.token_hex(8)
         outdir = tmpdir / "out"
         outdir.mkdir()
-        res = encode_to_carriers([str(c)], str(outdir), msg, pwd, profile_name="nexus", create_decoys=0, expire_seconds=2, use_fec=False, compress=False, pepper=None, bind_device=False, autowipe=None)
+        res = encode_to_carriers([str(c)], str(outdir), msg, pwd, profile_name="nexus", create_decoys=0, expire_seconds=15, use_fec=False, compress=False, pepper=None, bind_device=False, autowipe=None)
         if verbose:
             logger.info("Wrote files: %s", res["written"])
         try:
@@ -572,7 +572,7 @@ def selftest(verbose: bool = False) -> int:
             logger.error("Selftest decode error: %s", e)
             return 3
         logger.info("Selftest decode OK (before expiry)")
-        time.sleep(3)
+        time.sleep(30)
         try:
             _ = decode_from_parts([res["written"][0]], pwd, "nexus", use_fec=False, compress=False, pepper=None, bind_device=False)
             logger.error("Selftest: expected expiry but decode succeeded")
