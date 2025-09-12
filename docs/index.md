@@ -18,7 +18,7 @@ Table of contents
 - Quick start
 - Primary design goals
 - Security & design notes
-- Authors, TwinCiphers formation & acknowledgements, Assistance
+- Authors, TwinCiphers formation & acknowledgements
 - Research & future insight (roadmap)
 - Where to go next
 
@@ -65,8 +65,6 @@ TwinCiphers (maintainers): security research & tooling collective focusing on st
 Formation story: HylexCrypt grew from collaboration exploring practical steganography + crypto fusions.
 
 Acknowledgements: Pillow, NumPy, cryptography, argon2-cffi, reedsolo, SciPy, soundfile, colorama, psutil.
-
-Assistance: Perplexity and Chatgpt helped in finding bugs and solving errors.
 
 Research & future insight (roadmap)
 -----------------------------------

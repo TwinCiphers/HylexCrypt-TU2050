@@ -4,13 +4,12 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "HylexCrypt"
-version = "2050.0.1"
+version = "2050.1.0"
 description = "HylexCrypt - The Ultimate 2050 - stego + crypto CLI tool"
 readme = "README.md"
 requires-python = ">=3.9"
 authors = [
-  {name = "Deepak P S", email = "deepakkrishnark@gmail.com"},
-  {name = "Nithin S", email = "nithinsrinivas333@gmail.com"}
+  {name = "Deepak P S , Nithin S", email = "deepakkrishnark@gmail.com"}
 ]
 maintainers = [
   {name = "TwinCiphers", email = "twinciphers@gmail.com"}

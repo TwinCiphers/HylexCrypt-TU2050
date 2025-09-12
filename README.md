@@ -1,5 +1,5 @@
 # HylexCrypt - The Ultimate 2050
-
+![HylexCrypt Logo](https://github.com/TwinCiphers/HylexCrypt-TU2050/blob/main/docs/Logo.jpeg)
 > 🔐 Unified Advanced Steganography + Cryptography Tool (Educational & Research Use)
 
 HylexCrypt - The Ultimate 2050 is an **all-in-one steganography and encryption toolkit**.  
