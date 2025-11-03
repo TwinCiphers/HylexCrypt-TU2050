@@ -10,10 +10,10 @@ It encrypts secret messages with modern cryptographic algorithms and hides them 
 View the Complete Documentation here [HylexCrypt-Docs](https://hackmd.io/@hylexcrypt-tu2050/SkRnM51ogl)
 
 ## Authors
-Author Name: DEEPAK P S 
+Author Name: DEEPAK P S //
 Mail id: deepakkrishnark@gmail.com 
 
-Author Name: NITHIN S
+Author Name: NITHIN S <br>
 Mail id: nithinsrinivas333@gmail.com
 
 ## ✨ Features
