@@ -9,6 +9,13 @@ It encrypts secret messages with modern cryptographic algorithms and hides them 
 ## 📖 Documentation
 View the Complete Documentation here [HylexCrypt-Docs](https://hackmd.io/@hylexcrypt-tu2050/SkRnM51ogl)
 
+## Authors
+Author Name: DEEPAK P S 
+Mail id: deepakkrishnark@gmail.com 
+
+Author Name: NITHIN S
+Mail id: nithinsrinivas333@gmail.com
+
 ## ✨ Features
 
 - **🔑 Argon2id Key Derivation** – Memory-hard KDF, secure against brute-force.
